@@ -1,0 +1,9 @@
+cron:
+- description: poll every 10min
+  url: /poll
+  target: default
+  schedule: every 10 mins
+- description: poll every hour
+  url: /cleanup
+  target: default
+  schedule: every 1 hours

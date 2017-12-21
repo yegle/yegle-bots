@@ -1,0 +1,3 @@
+queue:
+- name: default
+  rate: 6/m

@@ -1,0 +1,20 @@
+runtime: go
+api_version: go1
+
+handlers:
+- url: /_ah/queue/go/delay
+  login: admin
+  script: _go_app
+- url: /.*
+  script: _go_app
+
+env_variables:
+  BOT_KEY: 'FILL_IN_YOUR_BOT_KEY'
+ 
+instance_class: F1
+automatic_scaling:
+  max_concurrent_requests: 80
+  max_idle_instances: 0
+  max_pending_latency: 15s
+  min_idle_instances: 0
+  min_pending_latency: 15s 
