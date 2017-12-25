@@ -31,6 +31,7 @@ const DefaultTimeout = 9 * time.Minute
 const DefaultChatID = `@yahnc`
 
 var editMessageFunc = delay.Func("editMessage", func(ctx context.Context, itemID int64, messageID int64) {
+	log.Infof(ctx, "editing message: id %d, message id %d", itemID, messageID)
 	story := Story{ID: itemID, MessageID: messageID}
 	err := story.EditMessage(ctx)
 	if err != nil {
@@ -43,10 +44,10 @@ var editMessageFunc = delay.Func("editMessage", func(ctx context.Context, itemID
 	if _, err := datastore.Put(ctx, key, &story); err != nil {
 		log.Errorf(ctx, "got error from datastore.Put: %v", err)
 	}
-	log.Infof(ctx, "successfully edit message: item %d, messageID %d", itemID, messageID)
 })
 
 var sendMessageFunc = delay.Func("sendMessage", func(ctx context.Context, itemID int64) {
+	log.Infof(ctx, "sending message: id %d", itemID)
 	story := Story{ID: itemID}
 	err := story.SendMessage(ctx)
 	if err != nil {
@@ -59,10 +60,10 @@ var sendMessageFunc = delay.Func("sendMessage", func(ctx context.Context, itemID
 	if _, err := datastore.Put(ctx, key, &story); err != nil {
 		log.Errorf(ctx, "got error from datastore.Put: %v", err)
 	}
-	log.Infof(ctx, "successfully sent message: item %d", itemID)
 })
 
 var deleteMessageFunc = delay.Func("deleteMessage", func(ctx context.Context, itemID int64, messageID int64) {
+	log.Infof(ctx, "deleting message: id %d, message id %d", itemID, messageID)
 	story := Story{ID: itemID, MessageID: messageID}
 	if err := story.DeleteMessage(ctx); err != nil {
 		log.Errorf(ctx, "got error from DeleteMessage: %v", err)
