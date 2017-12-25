@@ -182,7 +182,10 @@ func myHTTPClient(ctx context.Context) *http.Client {
 func cleanUpHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 	var allStories []Story
-	_, err := datastore.NewQuery("Story").GetAll(ctx, &allStories)
+
+	now := time.Now()
+	oneDayAgo := now.Add(-24 * time.Hour)
+	_, err := datastore.NewQuery("Story").Filter("LastSave <=", oneDayAgo).GetAll(ctx, &allStories)
 	if err != nil {
 		log.Errorf(ctx, "error in GetAll(): %v", err)
 		return
@@ -191,15 +194,11 @@ func cleanUpHandler(w http.ResponseWriter, r *http.Request) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	now := time.Now()
-
 	for _, story := range allStories {
-		if now.Sub(story.LastSave) > 24*time.Hour {
-			wg.Add(1)
-			go func(id, messageID int64) {
-				defer wg.Done()
-				deleteMessageFunc.Call(ctx, id, messageID)
-			}(story.ID, story.MessageID)
-		}
+		wg.Add(1)
+		go func(id, messageID int64) {
+			defer wg.Done()
+			deleteMessageFunc.Call(ctx, id, messageID)
+		}(story.ID, story.MessageID)
 	}
 }
