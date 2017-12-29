@@ -32,7 +32,7 @@ type Story struct {
 func NewFromDatastore(ctx context.Context, id int64) (Story, error) {
 	var story Story
 	if err := datastore.Get(ctx, GetKey(ctx, id), &story); err != nil {
-		return story, errors.Wrap(err, "datastore.Get failed")
+		return story, errors.WithStack(err)
 	}
 	return story, nil
 }
@@ -64,13 +64,13 @@ func (s *Story) Save() ([]datastore.Property, error) {
 func (s *Story) FillMissingFields(ctx context.Context) error {
 	resp, err := myHTTPClient(ctx).Get(ItemURL(s.ID))
 	if err != nil {
-		return errors.Wrap(err, "failed in FillMissingFields")
+		return errors.WithStack(err)
 	}
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(s)
 	if err != nil {
-		return errors.Wrap(err, "failed in FillMissingFields")
+		return errors.WithStack(err)
 	}
 	s.missingFieldsLoaded = true
 	return nil
@@ -142,22 +142,22 @@ func (s *Story) ToDeleteMessageRequest() DeleteMessageRequest {
 func (s *Story) EditMessage(ctx context.Context) error {
 	if !s.missingFieldsLoaded {
 		if err := s.FillMissingFields(ctx); err != nil {
-			return errors.Wrap(err, "failed in Story.EditMessage")
+			return errors.WithStack(err)
 		}
 	}
 	if s.ShouldIgnore() {
-		return ErrIgnoredItem
+		return errors.WithStack(ErrIgnoredItem)
 	}
 
 	req := s.ToEditMessageTextRequest()
 	jsonBytes, err := json.Marshal(req)
 	if err != nil {
-		return errors.Wrap(err, "failed in Story.EditMessage")
+		return errors.WithStack(err)
 	}
 
 	resp, err := myHTTPClient(ctx).Post(TelegramAPI("editMessageText"), "application/json", bytes.NewBuffer(jsonBytes))
 	if err != nil {
-		return errors.Wrap(err, "failed in Story.EditMessage")
+		return errors.WithStack(err)
 	}
 	defer resp.Body.Close()
 	io.Copy(ioutil.Discard, resp.Body)
@@ -177,24 +177,24 @@ func (s *Story) InDatastore(ctx context.Context) bool {
 func (s *Story) SendMessage(ctx context.Context) error {
 	if !s.missingFieldsLoaded {
 		if err := s.FillMissingFields(ctx); err != nil {
-			return errors.Wrap(err, "failed in Story.SendMessage")
+			return errors.WithStack(err)
 		}
 	}
 
 	if s.ShouldIgnore() {
 		return ErrIgnoredItem
 	} else if s.InDatastore(ctx) {
-		return fmt.Errorf("story already posted: %#v", s)
+		return errors.WithStack(fmt.Errorf("story already posted: %#v", s))
 	}
 	req := s.ToSendMessageRequest()
 	jsonBytes, err := json.Marshal(req)
 	if err != nil {
-		return errors.Wrap(err, "failed in Story.SendMessage")
+		return errors.WithStack(err)
 	}
 
 	resp, err := myHTTPClient(ctx).Post(TelegramAPI("sendMessage"), "application/json", bytes.NewBuffer(jsonBytes))
 	if err != nil {
-		return errors.Wrap(err, "failed in Story.SendMessage")
+		return errors.WithStack(err)
 	}
 	defer resp.Body.Close()
 
@@ -202,7 +202,7 @@ func (s *Story) SendMessage(ctx context.Context) error {
 
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
-		return errors.Wrap(err, "failed in Story.SendMessage")
+		return errors.WithStack(err)
 	}
 	s.MessageID = response.Result.MessageID
 	return nil
@@ -213,12 +213,12 @@ func (s *Story) DeleteMessage(ctx context.Context) error {
 	req := s.ToDeleteMessageRequest()
 	jsonBytes, err := json.Marshal(req)
 	if err != nil {
-		return errors.Wrap(err, "failed in Story.DeleteMessage")
+		return errors.WithStack(err)
 	}
 
 	resp, err := myHTTPClient(ctx).Post(TelegramAPI("deleteMessage"), "application/json", bytes.NewBuffer(jsonBytes))
 	if err != nil {
-		return errors.Wrap(err, "failed in Story.DeleteMessage")
+		return errors.WithStack(err)
 	}
 	defer resp.Body.Close()
 
@@ -226,16 +226,15 @@ func (s *Story) DeleteMessage(ctx context.Context) error {
 
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
-		return errors.Wrap(err, "failed in Story.DeleteMessage")
+		return errors.WithStack(err)
 	}
 
 	if !response.OK {
-		return fmt.Errorf("failed in Story.DeleteMessage: error_code:%d description:%s", response.ErrorCode, response.Description)
+		return errors.WithStack(fmt.Errorf("%#v", response))
 	}
 	key := GetKey(ctx, s.ID)
 	if err := datastore.Delete(ctx, key); err != nil {
-		log.Errorf(ctx, "failed to delete %#v: %v", s, err)
-		return errors.Wrap(err, "failed in datastore.Delete")
+		return errors.WithStack(err)
 	}
 	log.Infof(ctx, "%d (messageID: %d) deleted", s.ID, s.MessageID)
 	return nil

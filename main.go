@@ -30,19 +30,23 @@ const DefaultTimeout = 9 * time.Minute
 // DefaultChatID is the default chat ID.
 const DefaultChatID = `@yahnc`
 
+func loge(ctx context.Context, err error) {
+	log.Errorf(ctx, "%+v", errors.WithStack(err))
+}
+
 var editMessageFunc = delay.Func("editMessage", func(ctx context.Context, itemID int64, messageID int64) {
 	log.Infof(ctx, "editing message: id %d, message id %d", itemID, messageID)
 	story := Story{ID: itemID, MessageID: messageID}
 	err := story.EditMessage(ctx)
 	if err != nil {
 		if err != ErrIgnoredItem {
-			log.Errorf(ctx, "got error from EditMessage: %#v", err)
+			loge(ctx, err)
 		}
 		return
 	}
 	key := GetKey(ctx, itemID)
 	if _, err := datastore.Put(ctx, key, &story); err != nil {
-		log.Errorf(ctx, "got error from datastore.Put: %v", err)
+		loge(ctx, err)
 	}
 })
 
@@ -52,13 +56,13 @@ var sendMessageFunc = delay.Func("sendMessage", func(ctx context.Context, itemID
 	err := story.SendMessage(ctx)
 	if err != nil {
 		if err != ErrIgnoredItem {
-			log.Errorf(ctx, "got error from SendMessage: %#v", err)
+			loge(ctx, err)
 		}
 		return
 	}
 	key := GetKey(ctx, itemID)
 	if _, err := datastore.Put(ctx, key, &story); err != nil {
-		log.Errorf(ctx, "got error from datastore.Put: %v", err)
+		loge(ctx, err)
 	}
 })
 
@@ -66,7 +70,7 @@ var deleteMessageFunc = delay.Func("deleteMessage", func(ctx context.Context, it
 	log.Infof(ctx, "deleting message: id %d, message id %d", itemID, messageID)
 	story := Story{ID: itemID, MessageID: messageID}
 	if err := story.DeleteMessage(ctx); err != nil {
-		log.Errorf(ctx, "got error from DeleteMessage: %v", err)
+		loge(ctx, err)
 	}
 })
 
@@ -106,7 +110,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	topStories, err := getTopStories(ctx, BatchSize)
 	if err != nil {
-		log.Errorf(ctx, "error trying to fetch top stories: %v", err)
+		loge(ctx, err)
 		return
 	}
 
@@ -136,7 +140,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	multiErr, ok := err.(appengine.MultiError)
 
 	if !ok {
-		log.Debugf(ctx, "got unknown error from GetMulti: %#v", err)
+		log.Debugf(ctx, "%v", errors.Wrap(err, "in func handler() from datastore.GetMulti()"))
 		return
 	}
 
@@ -155,7 +159,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 				sendMessageFunc.Call(ctx, id)
 			}(keys[i].IntID())
 		default:
-			log.Errorf(ctx, "got unknown error in datastore.MultiGet: %#v", err)
+			loge(ctx, err)
 		}
 	}
 }
@@ -163,13 +167,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func getTopStories(ctx context.Context, limit int) ([]int64, error) {
 	resp, err := myHTTPClient(ctx).Get(GetTopStoryURL())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed in getTopStories")
+		return nil, errors.Wrap(err, "getTopStories -> http.Client.Get")
 	}
 	defer resp.Body.Close()
 
 	var ret []int64
 	if err := json.NewDecoder(resp.Body).Decode(&ret); err != nil {
-		return nil, errors.Wrap(err, "failed in getTopStories")
+		return nil, errors.Wrap(err, "in getTopStories from json.Decoder.Decode()")
 	}
 
 	return ret, nil
@@ -188,7 +192,7 @@ func cleanUpHandler(w http.ResponseWriter, r *http.Request) {
 	oneDayAgo := now.Add(-24 * time.Hour)
 	_, err := datastore.NewQuery("Story").Filter("LastSave <=", oneDayAgo).GetAll(ctx, &allStories)
 	if err != nil {
-		log.Errorf(ctx, "error in GetAll(): %v", err)
+		loge(ctx, err)
 		return
 	}
 
