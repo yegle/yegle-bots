@@ -79,7 +79,8 @@ func (s *Story) FillMissingFields(ctx context.Context) error {
 // ShouldIgnore is a filter for story.
 func (s *Story) ShouldIgnore() bool {
 	return s.Type != "story" ||
-		(s.Score < 20 && s.Descendants < 3) ||
+		s.Score < ScoreThreshold ||
+		s.Descendants < NumCommentsThreshold ||
 		s.URL == ""
 }
 

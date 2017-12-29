@@ -24,6 +24,14 @@ const TelegramAPIBase = `https://api.telegram.org/`
 // BatchSize is the number of top stories to fetch from Hacker News.
 const BatchSize = 30
 
+// NumCommentsThreshold is the threshold for number of comments. Story with less
+// than this threshold will not be posted in the channel.
+const NumCommentsThreshold = 5
+
+// ScoreThreshold is the threshold for the score. Story with less than this
+// threshold will not be posted in the channel.
+const ScoreThreshold = 50
+
 // DefaultTimeout is the default URLFetch timeout.
 const DefaultTimeout = 9 * time.Minute
 
