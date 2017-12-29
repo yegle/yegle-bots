@@ -6,4 +6,4 @@ cron:
 - description: Delete old stories from channel
   url: /cleanup
   target: default
-  schedule: every 1 hours
+  schedule: every 10 mins
