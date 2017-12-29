@@ -39,7 +39,7 @@ const DefaultTimeout = 9 * time.Minute
 const DefaultChatID = `@yahnc`
 
 func loge(ctx context.Context, err error) {
-	log.Errorf(ctx, "%+v", errors.WithStack(err))
+	log.Errorf(ctx, "%+v", err)
 }
 
 var editMessageFunc = delay.Func("editMessage", func(ctx context.Context, itemID int64, messageID int64) {
@@ -47,7 +47,7 @@ var editMessageFunc = delay.Func("editMessage", func(ctx context.Context, itemID
 	story := Story{ID: itemID, MessageID: messageID}
 	err := story.EditMessage(ctx)
 	if err != nil {
-		if err != ErrIgnoredItem {
+		if errors.Cause(err) != ErrIgnoredItem {
 			loge(ctx, err)
 		}
 		return
@@ -63,7 +63,7 @@ var sendMessageFunc = delay.Func("sendMessage", func(ctx context.Context, itemID
 	story := Story{ID: itemID}
 	err := story.SendMessage(ctx)
 	if err != nil {
-		if err != ErrIgnoredItem {
+		if errors.Cause(err) != ErrIgnoredItem {
 			loge(ctx, err)
 		}
 		return
