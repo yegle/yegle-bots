@@ -14,6 +14,10 @@ import (
 	"google.golang.org/appengine/log"
 )
 
+// Hot is the sign for a hot story, either because it has high score or it has
+// large number of discussions.
+const Hot = "🔥"
+
 // Story is a struct represents an item stored in datastore.
 // Part of the fields will be saved to datastore.
 type Story struct {
@@ -87,44 +91,43 @@ func (s *Story) ShouldIgnore() bool {
 // ToSendMessageRequest will return a new SendMessageRequest object
 func (s *Story) ToSendMessageRequest() SendMessageRequest {
 	return SendMessageRequest{
-		ChatID:    DefaultChatID,
-		Text:      fmt.Sprintf("<b>%s</b>  %s", s.Title, s.URL),
-		ParseMode: "HTML",
-		ReplyMarkup: InlineKeyboardMarkup{
-			InlineKeyboard: [][]InlineKeyboardButton{
-				{
-					{
-						Text: fmt.Sprintf("Score: %d+", s.Score),
-						URL:  s.URL,
-					},
-					{
-						Text: fmt.Sprintf("Comments: %d+", s.Descendants),
-						URL:  NewsURL(s.ID),
-					},
-				},
-			},
-		},
+		ChatID:      DefaultChatID,
+		Text:        fmt.Sprintf("<b>%s</b>  %s", s.Title, s.URL),
+		ParseMode:   "HTML",
+		ReplyMarkup: s.GetReplyMarkup(),
 	}
 }
 
 // ToEditMessageTextRequest will return a new EditMessageTextRequest object
 func (s *Story) ToEditMessageTextRequest() EditMessageTextRequest {
 	return EditMessageTextRequest{
-		ChatID:    DefaultChatID,
-		MessageID: s.MessageID,
-		Text:      fmt.Sprintf("<b>%s</b>  %s", s.Title, s.URL),
-		ParseMode: "HTML",
-		ReplyMarkup: InlineKeyboardMarkup{
-			InlineKeyboard: [][]InlineKeyboardButton{
+		ChatID:      DefaultChatID,
+		MessageID:   s.MessageID,
+		Text:        fmt.Sprintf("<b>%s</b>  %s", s.Title, s.URL),
+		ParseMode:   "HTML",
+		ReplyMarkup: s.GetReplyMarkup(),
+	}
+}
+
+// GetReplyMarkup will return the markup for the story.
+func (s *Story) GetReplyMarkup() InlineKeyboardMarkup {
+	var scoreSuffix, commentSuffix string
+	if s.Score > 100 {
+		scoreSuffix = " " + Hot
+	}
+	if s.Descendants > 100 {
+		commentSuffix = " " + Hot
+	}
+	return InlineKeyboardMarkup{
+		InlineKeyboard: [][]InlineKeyboardButton{
+			{
 				{
-					{
-						Text: fmt.Sprintf("Score: %d+", s.Score),
-						URL:  s.URL,
-					},
-					{
-						Text: fmt.Sprintf("Comments: %d+", s.Descendants),
-						URL:  NewsURL(s.ID),
-					},
+					Text: fmt.Sprintf("Score: %d+%s", s.Score, scoreSuffix),
+					URL:  s.URL,
+				},
+				{
+					Text: fmt.Sprintf("Comments: %d+%s", s.Descendants, commentSuffix),
+					URL:  NewsURL(s.ID),
 				},
 			},
 		},
@@ -231,8 +234,12 @@ func (s *Story) DeleteMessage(ctx context.Context) error {
 	}
 
 	if !response.OK {
-		return errors.WithStack(fmt.Errorf("%#v", response))
+		if !response.ShouldIgnoreError() {
+			return errors.WithStack(fmt.Errorf("%#v", response))
+		}
+		log.Warningf(ctx, "ignoring %#v", response)
 	}
+
 	key := GetKey(ctx, s.ID)
 	if err := datastore.Delete(ctx, key); err != nil {
 		return errors.WithStack(err)

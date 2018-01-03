@@ -2,6 +2,7 @@ package bots
 
 import (
 	"errors"
+	"strings"
 )
 
 // ErrIgnoredItem is returned when the story should be ignored.
@@ -57,4 +58,9 @@ type DeleteMessageResponse struct {
 	OK          bool   `json:"ok"`
 	ErrorCode   int64  `json:"error_code"`
 	Description string `json:"description"`
+}
+
+// ShouldIgnoreError return true if the message contains an error but should be ignored.
+func (r *DeleteMessageResponse) ShouldIgnoreError() bool {
+	return (r.ErrorCode == 400 && strings.Contains(r.Description, "message to delete not found"))
 }
