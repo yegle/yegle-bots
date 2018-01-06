@@ -62,5 +62,12 @@ type DeleteMessageResponse struct {
 
 // ShouldIgnoreError return true if the message contains an error but should be ignored.
 func (r *DeleteMessageResponse) ShouldIgnoreError() bool {
-	return (r.ErrorCode == 400 && strings.Contains(r.Description, "message to delete not found"))
+	return (r.ErrorCode == 400 &&
+		// Someone manually deleted the message from the channel
+		(strings.Contains(r.Description, "message to delete not found") ||
+			// Story was on top 30 list for > 24 hours but Telegram API only allow
+			// deleting messages that were posted in <48 hours.
+			// It should be fine to just ignore this error, and leave these stories in
+			// channel forever.
+			strings.Contains(r.Description, "message can't be deleted")))
 }
