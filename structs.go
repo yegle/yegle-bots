@@ -10,10 +10,11 @@ var ErrIgnoredItem = errors.New("item ignored")
 
 // SendMessageRequest is a struct that maps to a sendMessage request.
 type SendMessageRequest struct {
-	ChatID      string               `json:"chat_id"`
-	Text        string               `json:"text"`
-	ParseMode   string               `json:"parse_mode,omitempty"`
-	ReplyMarkup InlineKeyboardMarkup `json:"reply_markup,omitempty"`
+	ChatID              string               `json:"chat_id"`
+	Text                string               `json:"text"`
+	ParseMode           string               `json:"parse_mode,omitempty"`
+	ReplyMarkup         InlineKeyboardMarkup `json:"reply_markup,omitempty"`
+	DisableNotification bool                 `json:"disable_notification,omitempty"`
 }
 
 // InlineKeyboardMarkup type.

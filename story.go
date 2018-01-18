@@ -91,10 +91,11 @@ func (s *Story) ShouldIgnore() bool {
 // ToSendMessageRequest will return a new SendMessageRequest object
 func (s *Story) ToSendMessageRequest() SendMessageRequest {
 	return SendMessageRequest{
-		ChatID:      DefaultChatID,
-		Text:        fmt.Sprintf("<b>%s</b>  %s", s.Title, s.URL),
-		ParseMode:   "HTML",
-		ReplyMarkup: s.GetReplyMarkup(),
+		ChatID:              DefaultChatID,
+		Text:                fmt.Sprintf("<b>%s</b>  %s", s.Title, s.URL),
+		ParseMode:           "HTML",
+		ReplyMarkup:         s.GetReplyMarkup(),
+		DisableNotification: true,
 	}
 }
 
